@@ -1,8 +1,10 @@
 import express from "express";
 
 const app = express();
-app.listen(process.env.PORT || 8000, () => {
-  console.log("Server running");
+
+app.get("/", (req, res, next) => {
+  res.send("Here We Go!");
+  console.log(`Server running at http://localhost::${process.env.PORT}`);
 });
 
 export { app };

@@ -4,7 +4,6 @@
   "description": "",
   "main": "index.ts",
   "scripts": {
-    "dev": "nodemon ./src/index.ts",
     "start": "nodemon -r dotenv/config src/index.ts"
   },
   "keywords": [],
