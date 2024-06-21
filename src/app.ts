@@ -1,6 +1,17 @@
 import express from "express";
+import cookieParser from "cookie-parser";
 
 const app = express();
+
+app.use(cookieParser());
+
+//routes import
+import userRouter from "./routes/user.routes";
+
+//routes declaration
+app.use("/api/v1/users", userRouter);
+
+// http://localhost:8000/api/v1/users/register
 
 app.get("/", (req, res, next) => {
   res.send("Here We Go!");
