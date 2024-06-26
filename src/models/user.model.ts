@@ -36,6 +36,11 @@ const userSchema = new Schema(
     refreshTokem: {
       type: String,
     },
+
+    avatar: {
+      type: String,
+      required: true,
+    },
   },
   {
     timestamps: true,
