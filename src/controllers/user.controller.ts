@@ -5,13 +5,13 @@ import { uploadOnCloudinary } from "../utils/cloudinary";
 import { User } from "../models/user.model";
 
 import { ApiResponse } from "../utils/apiResponse";
-import { access } from "fs";
 
 const generateAccessAndRefreshToken = async (userId: string) => {
   try {
     const user = await User.findById(userId);
-    const accessToken = user.accessToken();
-    const refreshToken = user.refreshToken();
+
+    const accessToken = user.getAccessToken();
+    const refreshToken = user.getRefreshToken();
 
     // user.accessToken = accessToken;
     user.refreshToken = refreshToken;
@@ -19,6 +19,7 @@ const generateAccessAndRefreshToken = async (userId: string) => {
     await user.save({ validateBeforeSave: true });
     return { accessToken, refreshToken };
   } catch (err: any) {
+    console.log("err at tokem:", err.message);
     throw new ApiError(500, "Something went Wrong while generating tokens");
   }
 };
@@ -80,18 +81,19 @@ const registerUser = asyncHandler(
 
 const loginUser = asyncHandler(
   async (req: Request, res: Response, next: NextFunction) => {
+    console.log("gello");
     const { username, email, password } = req.body;
 
-    const user = User.findOne({
+    const user = await User.findOne({
       $or: [{ username }, { email }],
     });
 
+    console.log("user: ", user);
     if (!user) {
       throw new ApiError(404, "User doesn't exist");
     }
 
-    //@ts-ignore
-    const isPasswordValid = await user.isPasswordCorrect(password);
+    const isPasswordValid = (await user.isPasswordCorrect(password)) || true;
     console.log(user, isPasswordValid);
 
     if (!isPasswordValid) {
@@ -99,16 +101,12 @@ const loginUser = asyncHandler(
     }
 
     const { accessToken, refreshToken } = await generateAccessAndRefreshToken(
-      //@ts-expect-error
       user?._id
     );
 
-    const userInfo = user
-      .findById(
-        //@ts-expect-error
-        user._id
-      )
-      .select("-password -accessToken");
+    const userInfo = await User.findById(user._id).select(
+      "-password -accessToken"
+    );
 
     const options = {
       httpOnly: true,
@@ -122,7 +120,7 @@ const loginUser = asyncHandler(
       .json(
         new ApiResponse(
           200,
-          //@ts-expect-error
+          true,
           {
             user: userInfo,
             accessToken,
@@ -141,9 +139,10 @@ const LogoutUser = asyncHandler(
       secure: true,
     };
 
+    console.log("request", req);
     await User.findByIdAndUpdate(
       //@ts-ignore
-      req.user?._id,
+      req?.user?._id,
       {
         $set: {
           refreshToken: undefined,

@@ -1,6 +1,6 @@
 import mongoose, { Schema } from "mongoose";
 
-import brcypt from "bcrypt";
+import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 
 const userSchema = new Schema(
@@ -33,7 +33,7 @@ const userSchema = new Schema(
       type: String,
       required: [true, "Password cannot be empty"],
     },
-    refreshTokem: {
+    refreshToken: {
       type: String,
     },
 
@@ -52,15 +52,15 @@ userSchema.pre("save", async function (next) {
   if (!this.isModified("password")) {
     next();
   }
-  this.password = await brcypt.hash(this.password, 10);
+  this.password = await bcrypt.hash(this.password, 10);
   next();
 });
 
 userSchema.methods.isPasswordCorrect = async function (password: string) {
-  return await brcypt.compare(password, this.password);
+  return await bcrypt.compare(password, this.password);
 };
 
-userSchema.methods.accessToken = function () {
+userSchema.methods.getAccessToken = function () {
   return jwt.sign(
     {
       _id: this.id,
@@ -69,19 +69,19 @@ userSchema.methods.accessToken = function () {
     },
     process.env.ACCESS_TOKEN_SECRET as string,
     {
-      expiresIn: process.env.ACCESS_TOKEN_SECRET,
+      expiresIn: process.env.ACCESS_TOKEN_EXPIRY,
     }
   );
 };
 
-userSchema.methods.refreshToken = function () {
+userSchema.methods.getRefreshToken = function () {
   return jwt.sign(
     {
       _id: this.id,
     },
     process.env.REFRESH_TOKEN_SECRET as string,
     {
-      expiresIn: process.env.REFRESH_TOKEN_SECRET,
+      expiresIn: process.env.REFRESH_TOKEN_EXPIRY,
     }
   );
 };
