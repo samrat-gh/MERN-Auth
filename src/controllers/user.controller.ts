@@ -6,6 +6,8 @@ import { User } from "../models/user.model";
 
 import { ApiResponse } from "../utils/apiResponse";
 
+import jwt from "jsonwebtoken";
+
 const generateAccessAndRefreshToken = async (userId: string) => {
   try {
     const user = await User.findById(userId);
@@ -94,7 +96,7 @@ const loginUser = asyncHandler(
     }
 
     const isPasswordValid = (await user.isPasswordCorrect(password)) || true;
-    console.log(user, isPasswordValid);
+    // console.log(user, isPasswordValid);
 
     if (!isPasswordValid) {
       throw new ApiError(404, "Invalid CredentialsCredentials");
@@ -161,4 +163,63 @@ const LogoutUser = asyncHandler(
   }
 );
 
-export { registerUser, loginUser, LogoutUser };
+const refreshAccessToken = asyncHandler(async (req: Request, res: Response) => {
+  const incomingRefreshToken =
+    req.cookies.refreshToken || req.body.refreshToken;
+
+  // console.log(incomingRefreshToken);
+
+  if (!incomingRefreshToken) {
+    throw new ApiError(401, "Request Unauthorized");
+  }
+
+  try {
+    const decodedToken = jwt.verify(
+      incomingRefreshToken,
+      process.env.REFRESH_TOKEN_SECRET as string
+    ) as any;
+
+    // console.log(decodedToken);
+
+    const user = await User.findById(decodedToken?._id);
+
+    // console.log(user, decodedToken);
+
+    if (!user) {
+      throw new ApiError(401, "Invalid Refresh Token !");
+    }
+
+    if (incomingRefreshToken !== user?.refreshToken) {
+      throw new ApiError(401, "Refresh Token is expired!");
+    }
+
+    const options = {
+      httpOnly: true,
+      secure: true,
+    };
+
+    const { accessToken, refreshToken } = await generateAccessAndRefreshToken(
+      user._id
+    );
+
+    return res
+      .status(200)
+      .cookie("accessToken", accessToken, options)
+      .cookie("refreshToken", refreshAccessToken, options)
+      .json(
+        new ApiResponse(
+          200,
+          true,
+          {
+            accessToken,
+            refreshToken,
+          },
+          "Token Generated Successfully"
+        )
+      );
+  } catch (error: any) {
+    throw new ApiError(401, error?.message || "Internal Server Error");
+  }
+});
+
+export { registerUser, loginUser, LogoutUser, refreshAccessToken };
